@@ -1,8 +1,7 @@
 flask
 deepface
-tensorflow
+tensorflow==2.20.0
+tf-keras
 opencv-python-headless
 numpy
 gunicorn
-tf-keras
-
