@@ -1,5 +1,6 @@
-opencv-python
-mediapipe
+flask
 deepface
-pillow
-pyttsx3
+tensorflow
+opencv-python-headless
+numpy
+gunicorn

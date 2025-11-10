@@ -1,0 +1,82 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Emotion Detector (Web)</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align:center; background:#f4f7fb; margin:0; padding:20px; }
+    #video { border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+    #status { margin-top:10px; font-size:18px; }
+    #greeting { margin-top:6px; color: #1a73e8; font-weight:600; }
+    .controls { margin-top:12px; }
+  </style>
+</head>
+<body>
+  <h1>Emotion Detector</h1>
+  <video id="video" width="640" height="480" autoplay playsinline></video>
+  <div id="status">Initializing camera...</div>
+  <div id="greeting"></div>
+
+  <script>
+let lastEmotion = "";  // Track last detected emotion
+const video = document.getElementById('video');
+const status = document.getElementById('status');
+const SEND_INTERVAL_MS = 2500; // send every 2.5s
+
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    status.innerText = "Camera started. Detecting emotions...";
+    startSendingFrames();
+  } catch (err) {
+    status.innerText = "Camera error: " + err.message;
+  }
+}
+
+function captureFrameAsDataURL() {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg');
+}
+
+async function sendFrame() {
+  const dataURL = captureFrameAsDataURL();
+  try {
+    const resp = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataURL })
+    });
+    const json = await resp.json();
+    if (json.emotion) {
+      status.innerText = `Emotion: ${json.emotion} — ${json.greeting}`;
+
+      // 🔹 Only speak if emotion changed
+      if (json.emotion !== lastEmotion) {
+        const utter = new SpeechSynthesisUtterance(json.greeting);
+        speechSynthesis.cancel();  // stop any previous speech
+        speechSynthesis.speak(utter);
+        lastEmotion = json.emotion;
+      }
+    } else if (json.error) {
+      console.warn("Error:", json.error);
+    }
+  } catch (err) {
+    console.error("Request failed:", err);
+  }
+}
+
+function startSendingFrames() {
+  setInterval(sendFrame, SEND_INTERVAL_MS);
+}
+
+initCamera();
+</script>
+
+</body>
+</html>
